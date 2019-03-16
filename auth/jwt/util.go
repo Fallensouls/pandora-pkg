@@ -10,59 +10,75 @@ import (
 
 type JWTClaims struct {
 	Jwt.StandardClaims
-	Id string `json:"id"`
+	Data map[string]interface{} `json:"data,omitempty"`
 }
 
-var(
-	ErrInvalidToken  = errors.New("JWTAuth: invalid token")
-	ErrGetTokenId    = errors.New("JWTAuth: can not get id from token")
-	ErrGetIssuedTime = errors.New("JWTAuth: can not get issued time from token")
+type TokenInfo struct {
+	Id       string
+	IssuedAt int64
+	Data     map[string]interface{}
+}
+
+var (
+	ErrInvalidToken  = errors.New("JWT: invalid token")
+	ErrGetTokenId    = errors.New("JWT: can not get id from token")
+	ErrGetIssuedTime = errors.New("JWT: can not get issued time from token")
+	ErrGetData       = errors.New("JWT: can not get data from token")
 )
 
-// generateJWT generates Json Web Token used for authentication.
-// Here we use user's id as extra data.
+// generateJWT generates a Json Web Token.
+// Here we use id to specifies a token and add data(whatever you need) to the token.
 // Please do not add important information such as password to payload of JWT.
-func generateJWT(id string, duration time.Duration, key interface{}, method Jwt.SigningMethod) (token string, err error) {
+func (t *Token) generateJWT(id string, data map[string]interface{}) (token string, err error) {
 	claim := JWTClaims{
-		Id: id,
 		StandardClaims: Jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(duration).Unix(),
-			//Issuer:    Config.Issuer,
+			ExpiresAt: time.Now().Add(t.options.TokenDuration).Unix(),
+			Id:        id,
 			IssuedAt:  time.Now().Unix(),
 		},
+		Data: data,
 	}
 
-	unsigned := Jwt.NewWithClaims(method, claim)
-	token, err = unsigned.SignedString(key)
+	unsigned := Jwt.NewWithClaims(t.options.SigningMethod, claim)
+	token, err = unsigned.SignedString(t.privateKey)
 	return
 }
 
-// validateJWT validates whether jwt is valid.
-// If so, we still have to check if user really logged in before.
-func validateJWT(tokenString string, key interface{}, method Jwt.SigningMethod) (string, int64, error) {
+// validateJWT validates whether a jwt is valid.
+// If so, it returns information included in the token and nil.
+func (t *Token) validateJWT(tokenString string) (*TokenInfo, error) {
 	token, err := Jwt.Parse(tokenString, func(token *Jwt.Token) (interface{}, error) {
 		// Don't forget to validation the alg is what you expect:
-		if token.Method.Alg() != method.Alg() {
-			return nil, fmt.Errorf("JWTAuth: unexpected signing method %v", token.Header["alg"])
+		if token.Method.Alg() != t.options.SigningMethod.Alg() {
+			return nil, fmt.Errorf("JWT: unexpected signing method %v", token.Header["alg"])
 		}
-		return key, nil
+		return t.publicKey, nil
 	})
 
 	claims := token.Claims.(Jwt.MapClaims)
-	if claims["id"] == nil || claims["iat"] == nil || err != nil {
-		return "", 0, ErrInvalidToken
+	if claims["jti"] == nil || claims["iat"] == nil || err != nil {
+		return nil, ErrInvalidToken
 	}
 
-	id, ok := claims["id"].(string)
+	id, ok := claims["jti"].(string)
 	if !ok {
-		return "", 0, ErrGetTokenId
+		return nil, ErrGetTokenId
 	}
 
 	iat, ok := claims["iat"].(float64)
-	if !ok{
-		return "", 0, ErrGetIssuedTime
+	if !ok {
+		return nil, ErrGetIssuedTime
 	}
-	return id, int64(iat), nil
+
+	if claims["data"] == nil {
+		return &TokenInfo{Id: id, IssuedAt: int64(iat)}, nil
+	}
+
+	data, ok := claims["data"].(map[string]interface{})
+	if !ok {
+		return nil, ErrGetData
+	}
+	return &TokenInfo{Id: id, IssuedAt: int64(iat), Data: data}, nil
 }
 
 func SetSigningMethod(method string) Jwt.SigningMethod {
@@ -92,47 +108,47 @@ func SetSigningMethod(method string) Jwt.SigningMethod {
 
 func getKeysContent(privateKeyLocation, publicKeyLocation string) ([]byte, []byte, error) {
 	privateKeyContent, err := ioutil.ReadFile(privateKeyLocation)
-	if err != nil{
-		return nil, nil, fmt.Errorf("JWTAuth: failed to load a private key, %s", err)
+	if err != nil {
+		return nil, nil, fmt.Errorf("JWT: failed to load a private key, %s", err)
 	}
 
 	publicKeyContent, err := ioutil.ReadFile(publicKeyLocation)
-	if err != nil{
-		return nil, nil, fmt.Errorf("JWTAuth: failed to load a public key, %s", err)
+	if err != nil {
+		return nil, nil, fmt.Errorf("JWT: failed to load a public key, %s", err)
 	}
 	return privateKeyContent, publicKeyContent, nil
 }
 
 func getRSAKeys(privateKeyLocation, publicKeyLocation string) (interface{}, interface{}, error) {
 	privateKeyContent, publicKeyContent, err := getKeysContent(privateKeyLocation, publicKeyLocation)
-	if err != nil{
+	if err != nil {
 		return nil, nil, err
 	}
 	privateKey, err := Jwt.ParseRSAPrivateKeyFromPEM(privateKeyContent)
-	if err != nil{
-		return nil, nil, fmt.Errorf("JWTAuth: failed to genereate a private rsa key, %s", err)
+	if err != nil {
+		return nil, nil, fmt.Errorf("JWT: failed to genereate a private rsa key, %s", err)
 	}
 
 	publicKey, err := Jwt.ParseRSAPublicKeyFromPEM(publicKeyContent)
-	if err != nil{
-		return nil, nil, fmt.Errorf("JWTAuth: failed to genereate a public rsa key, %s", err)
+	if err != nil {
+		return nil, nil, fmt.Errorf("JWT: failed to genereate a public rsa key, %s", err)
 	}
 	return privateKey, publicKey, nil
 }
 
 func getECKeys(privateKeyLocation, publicKeyLocation string) (interface{}, interface{}, error) {
 	privateKeyContent, publicKeyContent, err := getKeysContent(privateKeyLocation, publicKeyLocation)
-	if err != nil{
+	if err != nil {
 		return nil, nil, err
 	}
 	privateKey, err := Jwt.ParseECPrivateKeyFromPEM(privateKeyContent)
-	if err != nil{
-		return nil, nil, fmt.Errorf("JWTAuth: failed to genereate a private ec key, %s", err)
+	if err != nil {
+		return nil, nil, fmt.Errorf("JWT: failed to genereate a private ec key, %s", err)
 	}
 
 	publicKey, err := Jwt.ParseECPublicKeyFromPEM(publicKeyContent)
-	if err != nil{
-		return nil, nil, fmt.Errorf("JWTAuth: failed to genereate a public ec key, %s", err)
+	if err != nil {
+		return nil, nil, fmt.Errorf("JWT: failed to genereate a public ec key, %s", err)
 	}
 	return privateKey, publicKey, nil
 }

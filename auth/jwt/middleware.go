@@ -3,32 +3,26 @@ package jwt
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"strings"
 )
 
 // Authenticator checks whether user is authenticated.
-func(a *JWTAuth) Authenticator() gin.HandlerFunc {
+func (t *Token) Authenticator() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.Request.Method == "GET" {
 			return
 		}
-		auth := c.Request.Header.Get(a.option.AccessHeader)
-		if auth == "" {
+		token, err := t.GetToken(c.Request)
+		if err != nil {
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-		parts := strings.SplitN(auth, " ", 2)
-		if parts[0] != "Bearer" {
+		userInfo, err := t.CheckToken(token)
+		if err != nil {
 			c.AbortWithStatus(http.StatusUnauthorized)
-			return
 		}
-
-		token := parts[1]
-		id, err := a.AccessChecker(token)
-		if err != nil{
-			c.AbortWithStatus(http.StatusUnauthorized)
-			return
+		c.Set("user_id", userInfo.Id)
+		if userInfo.Info != nil {
+			c.Set("user_info", userInfo.Info)
 		}
-		c.Set("user_id", id)
 	}
 }
