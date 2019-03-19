@@ -19,6 +19,7 @@ func (t *Token) Authenticator() gin.HandlerFunc {
 		userInfo, err := t.CheckToken(token)
 		if err != nil {
 			c.AbortWithStatus(http.StatusUnauthorized)
+			return
 		}
 		c.Set("user_id", userInfo.Id)
 		if userInfo.Info != nil {
