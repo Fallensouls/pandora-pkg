@@ -1,36 +1,45 @@
 package rbac
 
-type Role struct {
+type Role interface {
+	ID() int64
+	ParentID() int64
+	HasPermission(uri string, op operation) bool
+	IsParent(Role) bool
+	IsChild(Role) bool
+}
+
+type StandardRole struct {
 	Id          int64
-	Permissions map[permission]bool
+	Name        string
+	Permissions map[Permission]bool
 	ParentId    int64
 }
 
-func (r *Role) Add() {
-
+func (r *StandardRole) ID() int64 {
+	return r.Id
 }
 
-func (r *Role) Get() {
-
+func (r *StandardRole) ParentID() int64 {
+	return r.ParentId
 }
 
-func (r *Role) Update() {
-
+func (r *StandardRole) HasPermission(uri string, op operation) (flag bool) {
+	for permission := range r.Permissions {
+		if !permission.Match(uri) {
+			continue
+		}
+		if permission.Include(op) {
+			flag = true
+			break
+		}
+	}
+	return
 }
 
-func (r *Role) Delete() {
-
+func (r *StandardRole) IsParent(role Role) bool {
+	return r.Id == role.ParentID()
 }
 
-func (r *Role) HasPermission(p permission) bool {
-	_, ok := r.Permissions[p]
-	return ok
-}
-
-func (r *Role) IsParent(role Role) bool {
-	return r.Id == role.ParentId
-}
-
-func (r *Role) IsChild(role Role) bool {
-	return r.ParentId == role.Id
+func (r *StandardRole) IsChild(role Role) bool {
+	return r.ParentId == role.ID()
 }
