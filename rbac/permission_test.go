@@ -6,9 +6,9 @@ import (
 )
 
 func TestStandardPermission_Match(t *testing.T) {
-	permission1 := StandardPermission{1, `/data/*`, CRU}
-	permission2 := StandardPermission{2, `/data/**`, CR}
-	permission3 := StandardPermission{3, `/data`, CRUD}
+	permission1 := StandardPermission{`/data/*`, CRU}
+	permission2 := StandardPermission{`/data/**`, CR}
+	permission3 := StandardPermission{`/data`, CRUD}
 
 	assert := assert.New(t)
 
@@ -23,7 +23,7 @@ func TestStandardPermission_Match(t *testing.T) {
 }
 
 func TestStandardPermission_Include(t *testing.T) {
-	permission1 := StandardPermission{1, `/data/*`, CRU}
+	permission1 := StandardPermission{`/data/*`, CRU}
 
 	assert := assert.New(t)
 

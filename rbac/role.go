@@ -1,9 +1,9 @@
 package rbac
 
 type Role interface {
+	Permissions
 	ID() int64
 	ParentID() int64
-	HasPermission(uri string, op operation) bool
 	IsParent(Role) bool
 	IsChild(Role) bool
 }
@@ -11,7 +11,7 @@ type Role interface {
 type StandardRole struct {
 	Id          int64
 	Name        string
-	Permissions map[Permission]bool
+	Permissions Permissions
 	ParentId    int64
 }
 
@@ -24,16 +24,7 @@ func (r *StandardRole) ParentID() int64 {
 }
 
 func (r *StandardRole) HasPermission(uri string, op operation) (flag bool) {
-	for permission := range r.Permissions {
-		if !permission.Match(uri) {
-			continue
-		}
-		if permission.Include(op) {
-			flag = true
-			break
-		}
-	}
-	return
+	return r.Permissions.HasPermission(uri, op)
 }
 
 func (r *StandardRole) IsParent(role Role) bool {
