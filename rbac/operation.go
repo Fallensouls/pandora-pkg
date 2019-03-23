@@ -3,6 +3,7 @@ package rbac
 type operation uint8
 
 const (
+	Nil    operation = 0
 	Create operation = 1 << iota
 	Read
 	Update

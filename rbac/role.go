@@ -1,9 +1,9 @@
 package rbac
 
 type Role interface {
-	Permissions
 	ID() int64
 	ParentID() int64
+	HasPermission(uri string, op operation) bool
 	IsParent(Role) bool
 	IsChild(Role) bool
 }
@@ -25,6 +25,10 @@ func (r *StandardRole) ParentID() int64 {
 
 func (r *StandardRole) HasPermission(uri string, op operation) (flag bool) {
 	return r.Permissions.HasPermission(uri, op)
+}
+
+func (r *StandardRole) Destroy() {
+	r.Permissions.Destroy()
 }
 
 func (r *StandardRole) IsParent(role Role) bool {
