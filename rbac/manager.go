@@ -12,14 +12,22 @@ func (m *RoleManager) LoadRoles(roles []Role) {
 	}
 }
 
-func (m *RoleManager) GetRole(id int64) *Role {
+func (m *RoleManager) GetRole(id int64) Role {
 	role, ok := m.Roles.Load(id)
 	if !ok {
 		return nil
 	}
-	return role.(*Role)
+	return role.(Role)
 }
 
-func (m *RoleManager) IsSuperior(superior, subordinate Role) {
-
+func (m *RoleManager) IsSuperior(superior, subordinate Role) bool {
+	parent := subordinate
+	for {
+		if parent = m.GetRole(parent.ParentID()); parent == nil {
+			return false
+		}
+		if parent.ID() == superior.ID() {
+			return true
+		}
+	}
 }

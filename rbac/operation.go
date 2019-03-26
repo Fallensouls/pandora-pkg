@@ -1,10 +1,10 @@
 package rbac
 
-type operation uint8
+type Operation uint8
 
 const (
-	Nil    operation = 0
-	Create operation = 1 << iota
+	Nil    Operation = 0
+	Create Operation = 1 << iota
 	Read
 	Update
 	Delete

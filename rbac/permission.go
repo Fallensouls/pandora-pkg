@@ -8,13 +8,13 @@ type Permission interface {
 	// Match shows whether uri matches the uri of Permission.
 	Match(uri string) bool
 
-	// Include shows whether an operation is included in the operation of Permission.
-	Include(op operation) bool
+	// Include shows whether an Operation is included in the Operation of Permission.
+	Include(op Operation) bool
 }
 
 type StandardPermission struct {
 	URI       string
-	Operation operation
+	Operation Operation
 }
 
 func (p *StandardPermission) Match(uri string) bool {
@@ -35,31 +35,36 @@ func (p *StandardPermission) Match(uri string) bool {
 	return false
 }
 
-func (p *StandardPermission) Include(op operation) bool {
+func (p *StandardPermission) Include(op Operation) bool {
 	return (p.Operation & op) == op
 }
 
 type Permissions interface {
-	Add(uri string, op operation)
-	HasPermission(uri string, op operation) bool
+	Load([]StandardPermission)
+	HasPermission(uri string, op Operation) bool
 	Destroy()
 }
 
 type PermissionList []StandardPermission
 
-func NewList(permissions map[string]operation) *PermissionList {
+func NewPermissionList() *PermissionList {
 	list := make(PermissionList, 0)
-	for uri, op := range permissions {
-		list.Add(uri, op)
-	}
 	return &list
 }
 
-func (l *PermissionList) Add(uri string, op operation) {
-	*l = append(*l, StandardPermission{uri, op})
+func (l *PermissionList) Load(permissions []StandardPermission) {
+	l.Destroy()
+	*l = PermissionList(permissions)
+	//for uri, op := range permissions {
+	//	l.add(uri, op)
+	//}
 }
 
-func (l *PermissionList) HasPermission(uri string, op operation) (flag bool) {
+//func (l *PermissionList) add(uri string, op Operation) {
+//	*l = append(*l, StandardPermission{uri, op})
+//}
+
+func (l *PermissionList) HasPermission(uri string, op Operation) (flag bool) {
 	for _, permission := range *l {
 		if !permission.Match(uri) {
 			continue
@@ -77,18 +82,15 @@ func (l *PermissionList) Destroy() {
 }
 
 type PermissionTree struct {
-	Path      string
-	Operation operation
-	Children  []*PermissionTree
+	path      string
+	operation Operation
+	children  []*PermissionTree
 }
 
-func NewTree(permissions PermissionList) (root *PermissionTree) {
+func NewPermissionTree() (root *PermissionTree) {
 	root = &PermissionTree{
-		Path:      ``,
-		Operation: Nil,
-	}
-	for _, permission := range permissions {
-		root.Add(permission.URI, permission.Operation)
+		path:      ``,
+		operation: Nil,
 	}
 	return
 }
@@ -97,8 +99,8 @@ func (t *PermissionTree) Match(uri string) bool {
 	paths := handleURI(uri)
 search:
 	for i, path := range paths {
-		for _, child := range t.Children {
-			switch child.Path {
+		for _, child := range t.children {
+			switch child.path {
 			case `**`:
 				return true
 			case `*`:
@@ -106,7 +108,7 @@ search:
 					return true
 				}
 			default:
-				if child.Path == path {
+				if child.path == path {
 					if i == len(paths)-1 {
 						return true
 					}
@@ -120,49 +122,56 @@ search:
 	return false
 }
 
-func (t *PermissionTree) Include(op operation) bool {
-	return (t.Operation & op) == op
+func (t *PermissionTree) Include(op Operation) bool {
+	return (t.operation & op) == op
 }
 
-func (t *PermissionTree) Add(uri string, op operation) {
+func (t *PermissionTree) Load(permissions []StandardPermission) {
+	t.Destroy()
+	for _, permission := range permissions {
+		t.add(permission.URI, permission.Operation)
+	}
+}
+
+func (t *PermissionTree) add(uri string, op Operation) {
 	paths := handleURI(uri)
 insert:
 	for j, path := range paths {
-		for _, child := range t.Children {
-			if child.Path == path {
+		for _, child := range t.children {
+			if child.path == path {
 				t = child
 				if j == len(paths)-1 {
-					child.Operation = op
+					child.operation = op
 				}
 				continue insert
 			}
 		}
 		if j == len(paths)-1 {
-			t.Children = append(t.Children, &PermissionTree{
-				Path:      path,
-				Operation: op,
+			t.children = append(t.children, &PermissionTree{
+				path:      path,
+				operation: op,
 			})
 		} else {
-			t.Children = append(t.Children, &PermissionTree{
-				Path:      path,
-				Operation: Nil,
+			t.children = append(t.children, &PermissionTree{
+				path:      path,
+				operation: Nil,
 			})
 		}
 
-		if len(t.Children) > 0 {
-			t = t.Children[len(t.Children)-1]
+		if len(t.children) > 0 {
+			t = t.children[len(t.children)-1]
 		} else {
-			t = t.Children[0]
+			t = t.children[0]
 		}
 	}
 }
 
-func (t *PermissionTree) HasPermission(uri string, op operation) bool {
+func (t *PermissionTree) HasPermission(uri string, op Operation) bool {
 	paths := handleURI(uri)
 search:
 	for i, path := range paths {
-		for _, child := range t.Children {
-			switch child.Path {
+		for _, child := range t.children {
+			switch child.path {
 			case `**`:
 				return child.Include(op)
 			case `*`:
@@ -170,7 +179,7 @@ search:
 					return child.Include(op)
 				}
 			default:
-				if child.Path == path {
+				if child.path == path {
 					if i == len(paths)-1 {
 						return child.Include(op)
 					}

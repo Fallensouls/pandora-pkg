@@ -37,26 +37,27 @@ func TestStandardPermission_Include(t *testing.T) {
 	assert.False(permission1.Include(Delete))
 }
 
-func TestNewList(t *testing.T) {
-	permissions := map[string]operation{
-		`/data/*`:  CRU,
-		`/data/**`: CR,
-		`/data`:    CRUD,
+func TestNewPermissionList(t *testing.T) {
+	permissions := []StandardPermission{
+		{`/data/*`, CRU},
+		{`/data/**`, CR},
+		{`/data`, CRUD},
 	}
 
-	list := NewList(permissions)
+	list := NewPermissionList()
+	list.Load(permissions)
 	assert := assert.New(t)
 	assert.True(list.HasPermission(`/data/*`, CRU))
 	assert.True(list.HasPermission(`/data/**`, CR))
 	assert.True(list.HasPermission(`/data`, CRUD))
 }
 
-func TestPermissionList_Add(t *testing.T) {
-	list := make(PermissionList, 0)
-	list.Add(`/data/*`, CRU)
-
-	assert.True(t, list.HasPermission(`/data/*`, CRU))
-}
+//func TestPermissionList_Add(t *testing.T) {
+//	list := make(PermissionList, 0)
+//	list.add(`/data/*`, CRU)
+//
+//	assert.True(t, list.HasPermission(`/data/*`, CRU))
+//}
 
 func TestPermissionList_HasPermission(t *testing.T) {
 	list := make(PermissionList, 0)
@@ -109,28 +110,29 @@ func TestNewTree(t *testing.T) {
 		{`/auth/user/*`, CRUD},
 	}
 
-	tree := NewTree(permissions)
+	tree := NewPermissionTree()
+	tree.Load(permissions)
 
 	assert := assert.New(t)
-	assert.Equal(2, len(tree.Children))
-	assert.Equal(`data`, tree.Children[0].Path)
-	assert.Equal(CRUD, tree.Children[0].Operation)
-	assert.Equal(`auth`, tree.Children[1].Path)
-	assert.Equal(Read, tree.Children[1].Operation)
+	assert.Equal(2, len(tree.children))
+	assert.Equal(`data`, tree.children[0].path)
+	assert.Equal(CRUD, tree.children[0].operation)
+	assert.Equal(`auth`, tree.children[1].path)
+	assert.Equal(Read, tree.children[1].operation)
 
-	assert.Equal(2, len(tree.Children[0].Children))
-	assert.Equal(`*`, tree.Children[0].Children[0].Path)
-	assert.Equal(CRU, tree.Children[0].Children[0].Operation)
-	assert.Equal(`**`, tree.Children[0].Children[1].Path)
-	assert.Equal(CR, tree.Children[0].Children[1].Operation)
+	assert.Equal(2, len(tree.children[0].children))
+	assert.Equal(`*`, tree.children[0].children[0].path)
+	assert.Equal(CRU, tree.children[0].children[0].operation)
+	assert.Equal(`**`, tree.children[0].children[1].path)
+	assert.Equal(CR, tree.children[0].children[1].operation)
 
-	assert.Equal(1, len(tree.Children[1].Children))
-	assert.Equal(`user`, tree.Children[1].Children[0].Path)
-	assert.Equal(Nil, tree.Children[1].Children[0].Operation)
+	assert.Equal(1, len(tree.children[1].children))
+	assert.Equal(`user`, tree.children[1].children[0].path)
+	assert.Equal(Nil, tree.children[1].children[0].operation)
 
-	assert.Equal(1, len(tree.Children[1].Children[0].Children))
-	assert.Equal(`*`, tree.Children[1].Children[0].Children[0].Path)
-	assert.Equal(CRUD, tree.Children[1].Children[0].Children[0].Operation)
+	assert.Equal(1, len(tree.children[1].children[0].children))
+	assert.Equal(`*`, tree.children[1].children[0].children[0].path)
+	assert.Equal(CRUD, tree.children[1].children[0].children[0].operation)
 }
 
 func TestPermissionTree_Match(t *testing.T) {
@@ -141,7 +143,9 @@ func TestPermissionTree_Match(t *testing.T) {
 		{`/auth/user/*`, CRUD},
 	}
 
-	tree := NewTree(permissions)
+	tree := NewPermissionTree()
+	tree.Load(permissions)
+
 	assert := assert.New(t)
 	assert.True(tree.Match(`/data`))
 	assert.True(tree.Match(`/data/image`))
@@ -163,7 +167,8 @@ func TestPermissionTree_HasPermission(t *testing.T) {
 		{`/auth/user/*`, CRUD},
 	}
 
-	tree := NewTree(permissions)
+	tree := NewPermissionTree()
+	tree.Load(permissions)
 	assert := assert.New(t)
 
 	assert.True(tree.HasPermission(`/data/image`, CRU))
@@ -196,7 +201,8 @@ func TestPermissionTree_Destroy(t *testing.T) {
 		{`/auth/user/*`, CRUD},
 	}
 
-	tree := NewTree(permissions)
+	tree := NewPermissionTree()
+	tree.Load(permissions)
 	tree.Destroy()
 	assert := assert.New(t)
 	assert.Empty(tree)
