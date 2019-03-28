@@ -1,10 +1,18 @@
 package rbac
 
 type Role interface {
+	// ID should return thd id of a role.
 	ID() int64
+
+	// ParentID should return the id of a role's parent.
 	ParentID() int64
+
+	// IsParent shows whether the role is a parent of another role.
 	IsParent(Role) bool
+
+	// IsChild shows whether the role is a child of another role.
 	IsChild(Role) bool
+
 	Permissions
 }
 

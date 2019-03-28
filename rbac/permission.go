@@ -5,16 +5,22 @@ import (
 )
 
 type Permission interface {
-	// Match shows whether uri matches the uri of Permission.
+	GetPermission() (uri string, op Operation)
+
+	// Match shows whether uri matches the uri of GetPermission.
 	Match(uri string) bool
 
-	// Include shows whether an Operation is included in the Operation of Permission.
+	// Include shows whether an Operation is included in the Operation of GetPermission.
 	Include(op Operation) bool
 }
 
 type StandardPermission struct {
 	URI       string
 	Operation Operation
+}
+
+func (p *StandardPermission) GetPermission() (uri string, op Operation) {
+	return p.URI, p.Operation
 }
 
 func (p *StandardPermission) Match(uri string) bool {
@@ -40,8 +46,13 @@ func (p *StandardPermission) Include(op Operation) bool {
 }
 
 type Permissions interface {
-	Load([]StandardPermission)
+	// Add will add a new permission into Permissions.
+	Add(Permission)
+
+	// HasPermission shows whether a permission is included in permissions.
 	HasPermission(uri string, op Operation) bool
+
+	// Destroy should clean up all permissions and return an empty struct.
 	Destroy()
 }
 
@@ -60,9 +71,10 @@ func (l *PermissionList) Load(permissions []StandardPermission) {
 	//}
 }
 
-//func (l *PermissionList) add(uri string, op Operation) {
-//	*l = append(*l, StandardPermission{uri, op})
-//}
+func (l *PermissionList) Add(permission Permission) {
+	uri, op := permission.GetPermission()
+	*l = append(*l, StandardPermission{uri, op})
+}
 
 func (l *PermissionList) HasPermission(uri string, op Operation) (flag bool) {
 	for _, permission := range *l {
@@ -129,11 +141,12 @@ func (t *PermissionTree) Include(op Operation) bool {
 func (t *PermissionTree) Load(permissions []StandardPermission) {
 	t.Destroy()
 	for _, permission := range permissions {
-		t.add(permission.URI, permission.Operation)
+		t.Add(&permission)
 	}
 }
 
-func (t *PermissionTree) add(uri string, op Operation) {
+func (t *PermissionTree) Add(permission Permission) {
+	uri, op := permission.GetPermission()
 	paths := handleURI(uri)
 insert:
 	for j, path := range paths {

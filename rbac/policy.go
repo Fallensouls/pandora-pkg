@@ -1,14 +1,19 @@
 package rbac
 
-type Policy interface {
+type Policies interface {
+	// Load should load all policyManager for authorization.
 	Load([]StandardPolicy)
+
+	// Require determines whether a request needs authorization and returns all roles that have the permission.
 	Require(uri string, op Operation) ([]int64, bool)
+
+	// Destroy should clean up all policyManager and return an empty struct.
 	Destroy()
 }
 
 type StandardPolicy struct {
-	URI   string
-	group []PermissionGroup
+	URI    string
+	Groups []PermissionGroup
 }
 
 type PermissionGroup struct {
@@ -42,7 +47,7 @@ func NewPolicyTree() *PolicyTree {
 func (t *PolicyTree) Load(policies []StandardPolicy) {
 	t.Destroy()
 	for _, policy := range policies {
-		t.add(policy.URI, policy.group)
+		t.add(policy.URI, policy.Groups)
 	}
 }
 
