@@ -1,13 +1,13 @@
 package rbac
 
 type Policies interface {
-	// Load should load all policyManager for authorization.
+	// Load should load all policies for authorization.
 	Load([]StandardPolicy)
 
 	// Require determines whether a request needs authorization and returns all roles that have the permission.
 	Require(uri string, op Operation) ([]int64, bool)
 
-	// Destroy should clean up all policyManager and return an empty struct.
+	// Destroy should clean up all policies and return an empty struct.
 	Destroy()
 }
 

@@ -9,25 +9,31 @@ type AccessControl struct {
 
 type PolicyManager struct {
 	sync.RWMutex
-	policyManager Policies
+	policies Policies
+}
+
+func NewAccessControl() *AccessControl {
+	return &AccessControl{
+		PolicyManager: PolicyManager{policies: NewPolicyTree()},
+	}
 }
 
 func (p *PolicyManager) LoadPolicies(policies []StandardPolicy) {
 	p.Lock()
 	defer p.Unlock()
-	p.policyManager.Load(policies)
+	p.policies.Load(policies)
 }
 
 func (p *PolicyManager) RequireAuth(uri string, op Operation) ([]int64, bool) {
 	p.RLock()
 	defer p.RUnlock()
-	return p.policyManager.Require(uri, op)
+	return p.policies.Require(uri, op)
 }
 
 func (p *PolicyManager) IsGranted(uri string, op Operation, role Role) bool {
 	p.RLock()
 	defer p.RUnlock()
-	roleID, required := p.policyManager.Require(uri, op)
+	roleID, required := p.policies.Require(uri, op)
 	if !required {
 		return true
 	}
