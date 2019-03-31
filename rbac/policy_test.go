@@ -31,7 +31,7 @@ func TestPolicyTree_Load(t *testing.T) {
 	}
 
 	tree := NewPolicyTree()
-	tree.Load(policies)
+	tree.LoadPolicies(policies)
 
 	assert := assert.New(t)
 	assert.Equal(2, len(tree.children))
@@ -74,7 +74,7 @@ func TestPolicyTree_Require(t *testing.T) {
 	}
 
 	tree := NewPolicyTree()
-	tree.Load(policies)
+	tree.LoadPolicies(policies)
 
 	assert := assert.New(t)
 	roleID, required := tree.Require(`/data/image`, Read)
@@ -107,7 +107,7 @@ func TestPolicyTree_Destroy(t *testing.T) {
 	}
 
 	tree := NewPolicyTree()
-	tree.Load(policies)
+	tree.LoadPolicies(policies)
 	tree.Destroy()
 
 	assert.Empty(t, tree)

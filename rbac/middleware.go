@@ -17,7 +17,7 @@ func (ac *AccessControl) Authorizer() gin.HandlerFunc {
 		default:
 			return
 		}
-		roleID, required := ac.RequireAuth(c.Request.URL.Path, operation)
+		roleID, required := ac.Require(c.Request.URL.Path, operation)
 		c.Set("role_id", roleID)
 		c.Set("need_auth", required)
 	}

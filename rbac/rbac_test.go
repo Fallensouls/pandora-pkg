@@ -16,7 +16,7 @@ func TestPolicyManager_LoadPolicies(t *testing.T) {
 		}},
 	}
 
-	ac := NewAccessControl()
+	ac := NewAccessControl(NewPolicyTree(), NewRoleManager())
 	ac.LoadPolicies(policies)
 }
 
@@ -31,19 +31,19 @@ func TestPolicyManager_RequireAuth(t *testing.T) {
 		}},
 	}
 
-	ac := NewAccessControl()
+	ac := NewAccessControl(NewPolicyTree(), NewRoleManager())
 	ac.LoadPolicies(policies)
 
 	assert := assert.New(t)
-	roleID, required := ac.RequireAuth(`/data/image`, Read)
+	roleID, required := ac.Require(`/data/image`, Read)
 	assert.Equal([]int64{1, 2, 3, 9, 10}, roleID)
 	assert.True(required)
 
-	roleID, required = ac.RequireAuth(`/auth/user`, Read)
+	roleID, required = ac.Require(`/auth/user`, Read)
 	assert.Empty(roleID)
 	assert.False(required)
 
-	roleID, required = ac.RequireAuth(`/auth/user/1`, Delete)
+	roleID, required = ac.Require(`/auth/user/1`, Delete)
 	assert.Equal([]int64{5}, roleID)
 	assert.True(required)
 }
@@ -66,7 +66,7 @@ func TestPolicyManager_IsGranted(t *testing.T) {
 		{10, `role4`, nil, 5},
 	}
 
-	ac := NewAccessControl()
+	ac := NewAccessControl(NewPolicyTree(), NewRoleManager())
 	ac.LoadPolicies(policies)
 
 	assert := assert.New(t)

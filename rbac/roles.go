@@ -4,28 +4,34 @@ import (
 	"sync"
 )
 
-type Roles struct {
-	roles sync.Map
+type Roles interface {
+	SetRole(Role)
+	GetRole(int64) Role
+	IsSuperior(superior, subordinate Role) bool
 }
 
-func NewRoles() *Roles {
-	roles := Roles{}
-	return &roles
+type RoleManager struct {
+	manager sync.Map
 }
 
-func (r *Roles) SetRole(role Role) {
-	r.roles.Store(role.ID(), role)
+func NewRoleManager() *RoleManager {
+	var manager RoleManager
+	return &manager
 }
 
-func (r *Roles) GetRole(id int64) Role {
-	role, ok := r.roles.Load(id)
+func (r *RoleManager) SetRole(role Role) {
+	r.manager.Store(role.ID(), role)
+}
+
+func (r *RoleManager) GetRole(id int64) Role {
+	role, ok := r.manager.Load(id)
 	if !ok {
 		return nil
 	}
 	return role.(Role)
 }
 
-func (r *Roles) IsSuperior(superior, subordinate Role) bool {
+func (r *RoleManager) IsSuperior(superior, subordinate Role) bool {
 	parent := subordinate
 	for {
 		if parent = r.GetRole(parent.ParentID()); parent == nil {

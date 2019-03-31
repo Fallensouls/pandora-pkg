@@ -1,11 +1,14 @@
 package rbac
 
 type Policies interface {
-	// Load should load all policies for authorization.
-	Load([]StandardPolicy)
+	// LoadPolicies should load all policies for authorization.
+	LoadPolicies([]StandardPolicy)
 
-	// Require determines whether a request needs authorization and returns all roles that have the permission.
+	// Require determines whether a request needs authorization and returns all manager that have the permission.
 	Require(uri string, op Operation) ([]int64, bool)
+
+	// IsGranted shows whether a user who have the role can operate a resource.
+	IsGranted(uri string, op Operation, role Role) bool
 
 	// Destroy should clean up all policies and return an empty struct.
 	Destroy()
@@ -44,7 +47,7 @@ func NewPolicyTree() *PolicyTree {
 	return &root
 }
 
-func (t *PolicyTree) Load(policies []StandardPolicy) {
+func (t *PolicyTree) LoadPolicies(policies []StandardPolicy) {
 	t.Destroy()
 	for _, policy := range policies {
 		t.add(policy.URI, policy.Groups)
@@ -92,6 +95,19 @@ search:
 		break
 	}
 	return nil, false
+}
+
+func (t *PolicyTree) IsGranted(uri string, op Operation, role Role) bool {
+	roleID, required := t.Require(uri, op)
+	if !required {
+		return true
+	}
+	for _, id := range roleID {
+		if role.ID() == id {
+			return true
+		}
+	}
+	return false
 }
 
 func (t *PolicyTree) Destroy() {

@@ -14,10 +14,10 @@ func TestRoleManager_GetRole(t *testing.T) {
 		{7, `role3`, nil, 3},
 		{10, `role4`, nil, 5},
 	}
-	manager := NewRoles()
+	manager := NewRoleManager()
 
 	for i := range roles {
-		manager.roles.Store(roles[i].ID(), &roles[i])
+		manager.manager.Store(roles[i].ID(), &roles[i])
 	}
 
 	for _, stdRole := range roles {
@@ -36,7 +36,7 @@ func TestRoleManager_SetRole(t *testing.T) {
 		{7, `role3`, nil, 3},
 		{10, `role4`, nil, 5},
 	}
-	manager := NewRoles()
+	manager := NewRoleManager()
 
 	for i := range roles {
 		manager.SetRole(&roles[i])
@@ -44,7 +44,7 @@ func TestRoleManager_SetRole(t *testing.T) {
 
 	assert := assert.New(t)
 	for _, role := range roles {
-		newrole, ok := manager.roles.Load(role.ID())
+		newrole, ok := manager.manager.Load(role.ID())
 		assert.True(ok)
 		assert.Equal(role.Id, newrole.(Role).ID())
 	}
@@ -59,10 +59,10 @@ func TestRoleManager_IsSuperior(t *testing.T) {
 		{7, `role3`, nil, 3},
 		{10, `role4`, nil, 5},
 	}
-	manager := NewRoles()
+	manager := NewRoleManager()
 
 	for i := range roles {
-		manager.roles.Store(roles[i].ID(), &roles[i])
+		manager.manager.Store(roles[i].ID(), &roles[i])
 	}
 
 	assert := assert.New(t)
